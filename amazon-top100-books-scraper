@@ -1,0 +1,282 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from tabulate import tabulate
+from datetime import datetime
+import time
+import random
+import json
+import pandas as pd
+
+def delay():
+    #Function to delay some process to avoid detected and blocked
+    time.sleep(random.randint(3, 10))
+
+def lazy_loading(driver, scroll_count=50): 
+    #Scrolling down the page to overcome Lazy Loading
+    try:
+        # find the body element for scrolling
+        element = driver.find_element(By.TAG_NAME, 'body')
+        
+        # Perform the scroll action multiple times
+        count = 0
+        while count < scroll_count:
+            element.send_keys(Keys.PAGE_DOWN)
+            delay()
+            count += 1
+            print(f"scroll{count/scroll_count:.2f}completed.")
+    except Exception as e:
+        print(f"Error during lazy loading: {e}")
+
+def print_books_console(books):
+    #Print books data in a formatted table in console
+    if not books:
+        print("No books data to display")
+        return
+    
+    # Prepare data for tabulate
+    headers = ["Rank", "Name", "Author", "Rating", "Review Num", "URL"]
+    table_data = []
+    
+    for book in books:
+        row = [
+            book.get("Rank", "N/A"),
+            book.get("Name", "N/A")[:50] + "..." if book.get("Name", "N/A") and len(book.get("Name", "N/A")) > 50 else book.get("Name", "N/A"),
+            book.get("Author", "N/A"),
+            book.get("Rating", "N/A"),
+            book.get("Review Num", "N/A"),
+            book.get("URL", "N/A")[:50] + "..." if book.get("URL", "N/A") else "N/A"
+        ]
+        table_data.append(row)
+    
+    print("\nBooks Data Summary:")
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+    print(f"\nTotal books: {len(books)}")
+
+def save_to_files(books):
+    #Save books data to multiple file formats
+    if not books:
+        print("No data to save")
+        return
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Save as JSON
+    json_filename = f"amazon_books_{timestamp}.json"
+    try:
+        with open(json_filename, 'w', encoding='utf-8') as f:
+            json.dump(books, f, indent=4, ensure_ascii=False)
+        print(f"Data saved to {json_filename}")
+    except Exception as e:
+        print(f"Error saving JSON file: {e}")
+    
+    # Save as CSV
+    csv_filename = f"amazon_books_{timestamp}.csv"
+    try:
+        df = pd.DataFrame(books)
+        df.to_csv(csv_filename, index=False, encoding='utf-8')
+        print(f"Data saved to {csv_filename}")
+    except Exception as e:
+        print(f"Error saving CSV file: {e}")
+    
+    # Save as Excel
+    excel_filename = f"amazon_books_{timestamp}.xlsx"
+    try:
+        df = pd.DataFrame(books)
+        df.to_excel(excel_filename, index=False)
+        print(f"Data saved to {excel_filename}")
+    except Exception as e:
+        print(f"Error saving Excel file: {e}")
+
+def analyze_data(books):
+    #Perform basic analysis on the books data
+    if not books:
+        print("No data to analyze")
+        return
+    
+    df = pd.DataFrame(books)
+    
+    print("\nData Analysis:")
+    print("-" * 50)
+    
+    # Count of books
+    print(f"Total number of books: {len(df)}")
+    
+    # Average rating
+    try:
+        df['Rating'] = pd.to_numeric(df['Rating'], errors='coerce')
+        avg_rating = df['Rating'].mean()
+        print(f"Average rating: {avg_rating:.2f}")
+    except Exception as e:
+        print("Could not calculate average rating")
+    
+    # Top 5 authors by number of books
+    print("\nTop 5 authors by number of books:")
+    print(df['Author'].value_counts().head())
+    
+    # Distribution of ratings
+    print("\nRating distribution:")
+    print(df['Rating'].value_counts().sort_index())
+
+
+def fetch_book_info(driver):
+    #Main function to fetch book data including pagination handling
+    book_data = []
+    page_num = 1
+    
+    while True:
+        try:
+            # Wait for the grid container to load
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "p13n-desktop-grid"))
+            )
+            print(f"Grid located successfully on page {page_num}!")
+            
+            # Apply lazy loading for each page
+            lazy_loading(driver, scroll_count=50)
+            
+            # Add a small delay to ensure content is loaded
+            time.sleep(2)
+            
+            # Locate all grid items
+            grid_items = driver.find_elements(By.CSS_SELECTOR, "div[id^='gridItemRoot']")
+            print(f"Found {len(grid_items)} books on page {page_num}")
+            
+            # Extract the data from each grid item
+            for item in grid_items:
+                book = {}
+                
+                # Extract the rank
+                try:
+                    rank_element = item.find_element(By.CSS_SELECTOR, "span.zg-bdg-text")
+                    book["Rank"] = rank_element.text.strip()
+                except NoSuchElementException:
+                    book["Rank"] = None
+                
+                # Extract the URL
+                try:
+                    link_element = item.find_element(By.CSS_SELECTOR, "a.a-link-normal")
+                    href = link_element.get_attribute("href")
+                    book["URL"] = href
+                except NoSuchElementException:
+                    book["URL"] = None
+                
+                # Extract the book name
+                try:
+                    name_element = item.find_element(By.CSS_SELECTOR, "a.a-link-normal span")
+                    book["Name"] = name_element.text.strip()
+                except NoSuchElementException:
+                    book["Name"] = None
+                
+                # Extract the Author
+                try:
+                    author_container = item.find_element(By.CSS_SELECTOR, "a.a-size-small.a-link-child")
+                    book["Author"] = author_container.text.strip()
+                except NoSuchElementException:
+                    book["Author"] = None
+                
+                # Extract the ratings
+                try:
+                    rating_container = item.find_element(By.CSS_SELECTOR, "div.a-icon-row")
+                    rating_element = rating_container.find_element(By.CSS_SELECTOR, "a[title]")
+                    book["Rating"] = rating_element.get_attribute("title").split(" ")[0]
+                except NoSuchElementException:
+                    book["Rating"] = None
+                
+                # Extract the review numbers
+                try:
+                    review_container = item.find_element(By.CSS_SELECTOR, "div.a-icon-row")
+                    review_element = review_container.find_element(By.CSS_SELECTOR, "span.a-size-small")
+                    book["Review Num"] = review_element.text.strip()
+                except NoSuchElementException:
+                    book["Review Num"] = None
+                
+                # Only append if we have at least some data
+                if any(value is not None for value in book.values()):
+                    book_data.append(book)
+            
+            # Check if there are more pages
+            try:
+                next_page_element = driver.find_element(By.XPATH, "//li[@class='a-last']/a")
+                if next_page_element and next_page_element.is_displayed():
+                    next_page_url = next_page_element.get_attribute("href")
+                    if next_page_url:
+                        driver.get(next_page_url)
+                        time.sleep(2)
+                        page_num += 1
+                        print(f"Navigating to page {page_num}...")
+                    else:
+                        print("No more pages available")
+                        break
+                else:
+                    print("Next page link not visible")
+                    break
+            except NoSuchElementException:
+                print("No more pages to fetch")
+                break
+                
+        except TimeoutException:
+            print(f"Timeout waiting for page {page_num} to load")
+            break
+        except Exception as e:
+            print(f"Unexpected error on page {page_num}: {e}")
+            break
+    
+    print(f"Total books collected: {len(book_data)}")
+    return book_data
+def print_books_console(books):
+    #Print books data in a formatted table in console
+    if not books:
+        print("No books data to display")
+        return
+    
+    # Print each book's data
+    print("\nBooks Data Summary:")
+    for i, book in enumerate(books, 1):
+        print(f"\nBook {i}:")
+        print(f"Rank: {book.get('Rank', 'N/A')}")
+        print(f"Name: {book.get('Name', 'N/A')}")
+        print(f"Author: {book.get('Author', 'N/A')}")
+        print(f"Rating: {book.get('Rating', 'N/A')}")
+        print(f"Review Numbers: {book.get('Review Num', 'N/A')}")
+        print(f"URL: {book.get('URL', 'N/A')}")
+        print("-" * 50)
+    
+    print(f"\nTotal books: {len(books)}")
+def main():
+    driver = None
+    try:
+        # Initialize the WebDriver
+        driver = webdriver.Chrome(service=Service("/..../Downloads/chromedriver-mac-arm64/chromedriver"))
+        
+        # Navigate to the initial page
+        start_url = "https://www.amazon.com/Best-Sellers-Books/zgbs/books/"
+        driver.get(start_url)
+        
+        # Perform lazy loading
+        lazy_loading(driver, scroll_count=50)
+        
+        # Fetch the book data
+        books = fetch_book_info(driver)
+        
+        # Print formatted data to console
+        print_books_console(books)
+        
+        # Save data to files
+        save_to_files(books)
+        
+        # Analyze the data
+        analyze_data(books)
+        
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        if driver:
+            driver.quit()
+
+if __name__ == "__main__":
+    main()
