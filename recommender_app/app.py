@@ -148,12 +148,9 @@ if __name__ == '__main__':
     recommender.train()
     print("Recommender system ready. Starting the Flask server...")
     
-    # Most explicit way to bind to all interfaces
     app.run(
-        host='0.0.0.0',
-        port=5001,
+        host='0.0.0.0',  # Bind to all interfaces
+        port=8080,       # Try a different port
         debug=True,
-        use_reloader=True,
-        threaded=True
+        use_reloader=True
     )
-
