@@ -9,6 +9,12 @@ import gdown
 app = Flask(__name__)
 recommender = RecommenderModel()
 
+app.config.update(
+    SERVER_NAME=None,  # Clear any existing server name
+    APPLICATION_ROOT='/'
+)
+
+
 # Google Drive file ID and output file
 file_id = "1A2B3C4D5E6F7G8H9"
 output_file = "X_item_features.npy"
@@ -142,7 +148,12 @@ if __name__ == '__main__':
     recommender.train()
     print("Recommender system ready. Starting the Flask server...")
     
-    # Make sure debug mode is off when binding to 0.0.0.0
-    # Flask 3.x preferred way
-    app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=True)1)
+    # Most explicit way to bind to all interfaces
+    app.run(
+        host='0.0.0.0',
+        port=5001,
+        debug=True,
+        use_reloader=True,
+        threaded=True
+    )
 
