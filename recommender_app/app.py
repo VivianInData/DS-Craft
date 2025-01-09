@@ -149,8 +149,8 @@ if __name__ == '__main__':
     print("Recommender system ready. Starting the Flask server...")
     
     app.run(
-        host='0.0.0.0',  # Bind to all interfaces
-        port=8080,       # Try a different port
+        host='10.128.0.2',  # Your VM's actual IP
+        port=5001,
         debug=True,
         use_reloader=True
     )
