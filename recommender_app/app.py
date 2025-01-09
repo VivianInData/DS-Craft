@@ -142,15 +142,6 @@ def web_recommend():
         )
 
 if __name__ == '__main__':
-    # Prepare the recommender system
-    print("Preparing recommender system...")
     recommender.prepare_data(X_item_features, item_ids)
     recommender.train()
-    print("Recommender system ready. Starting the Flask server...")
-    
-    app.run(
-        host='10.128.0.2',  # My VM's IP
-        port=5001,
-        debug=True,
-        use_reloader=True
-    )
+    app.run(host='0.0.0.0', port=5001, debug=True)  # Changed from 10.128.0.2 to 0.0.0.0
