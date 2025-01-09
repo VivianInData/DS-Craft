@@ -149,7 +149,7 @@ if __name__ == '__main__':
     print("Recommender system ready. Starting the Flask server...")
     
     app.run(
-        host='10.128.0.2',  # Your VM's IP
+        host='10.128.0.2',  # My VM's IP
         port=5001,
         debug=True,
         use_reloader=True
