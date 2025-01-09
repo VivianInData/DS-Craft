@@ -141,5 +141,5 @@ if __name__ == '__main__':
     recommender.prepare_data(X_item_features, item_ids)
     recommender.train()
     print("Recommender system ready. Starting the Flask server...")
-    app.run(debug=True, port=5001)  # Change to a different port number if needed
+    app.run(host="0.0.0.0", port=5001)  # Change to a different port number if needed
 
