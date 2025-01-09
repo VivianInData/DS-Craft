@@ -3,12 +3,24 @@ from model import RecommenderModel
 import numpy as np
 import json
 import pandas as pd
+import gdown
 
 app = Flask(__name__)
 recommender = RecommenderModel()
 
-# Load all the necessary data
-X_item_features = np.load('X_item_features.npy')
+# Google Drive file ID
+file_id = "1A2B3C4D5E6F7G8H9"
+output_file = "X_item_features.npy"
+
+# Construct the URL
+url = f"https://drive.google.com/uc?id={file_id}"
+print("Downloading the file...")
+gdown.download(url, output_file, quiet=False)
+
+# Load the .npy file after downloading
+X_item_features = np.load(output_file)
+
+# Load the necessary data
 with open('item_ids.json', 'r') as f:
     item_ids = json.load(f)
     
