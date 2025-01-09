@@ -3,29 +3,44 @@ from model import RecommenderModel
 import numpy as np
 import json
 import pandas as pd
+import os
 import gdown
 
 app = Flask(__name__)
 recommender = RecommenderModel()
 
-# Google Drive file ID
+# Google Drive file ID and output file
 file_id = "1A2B3C4D5E6F7G8H9"
 output_file = "X_item_features.npy"
 
-# Construct the URL
-url = f"https://drive.google.com/uc?id={file_id}"
-print("Downloading the file...")
-gdown.download(url, output_file, quiet=False)
+# Check if the file exists, if not download it
+if not os.path.exists(output_file):
+    print(f"{output_file} not found. Downloading from Google Drive...")
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output_file, quiet=False)
+else:
+    print(f"{output_file} already exists.")
 
-# Load the .npy file after downloading
-X_item_features = np.load(output_file)
+# Load the .npy file after ensuring it exists
+try:
+    X_item_features = np.load(output_file)
+    print(f"{output_file} loaded successfully.")
+except Exception as e:
+    raise RuntimeError(f"Failed to load {output_file}: {e}")
 
 # Load the necessary data
-with open('item_ids.json', 'r') as f:
-    item_ids = json.load(f)
-    
-# Load the training interactions data
-train_inter = pd.read_csv('train_inter.csv')  # Adjust path if needed
+try:
+    with open('item_ids.json', 'r') as f:
+        item_ids = json.load(f)
+    print("item_ids.json loaded successfully.")
+except FileNotFoundError:
+    raise RuntimeError("item_ids.json not found in the directory.")
+
+try:
+    train_inter = pd.read_csv('train_inter.csv')  # Adjust path if needed
+    print("train_inter.csv loaded successfully.")
+except FileNotFoundError:
+    raise RuntimeError("train_inter.csv not found in the directory.")
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -120,9 +135,11 @@ def web_recommend():
             error=f"Error: {str(e)}"
         )
 
-# Keep your existing endpoints...
-
 if __name__ == '__main__':
+    # Prepare the recommender system
+    print("Preparing recommender system...")
     recommender.prepare_data(X_item_features, item_ids)
     recommender.train()
-    app.run(debug=True, port=5001)  # Change to a different port number
+    print("Recommender system ready. Starting the Flask server...")
+    app.run(debug=True, port=5001)  # Change to a different port number if needed
+
