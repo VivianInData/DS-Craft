@@ -148,11 +148,9 @@ if __name__ == '__main__':
     recommender.train()
     print("Recommender system ready. Starting the Flask server...")
     
-    print(f"Attempting to bind to 10.128.0.2:5001...")  # Add debug print
     app.run(
-        host='10.128.0.2',  # Your specific VM IP
+        host='10.128.0.2',  # Your VM's IP
         port=5001,
         debug=True,
-        use_reloader=True,
-        threaded=True
+        use_reloader=True
     )
