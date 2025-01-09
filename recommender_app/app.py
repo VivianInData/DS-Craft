@@ -143,5 +143,5 @@ if __name__ == '__main__':
     print("Recommender system ready. Starting the Flask server...")
     
     # Make sure debug mode is off when binding to 0.0.0.0
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    app.run(host='0.0.0.0', debug=True, port=5001)
 
